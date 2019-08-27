@@ -9,17 +9,62 @@ PCA is a technique for dimensionality reduction.  It can be used to visualize CN
 
 pip install git+https://github.com/FrancescoSaverioZuppichini/PytorchModulePCA.git
 
+It needs the following packages
 
-## Getting started
-
-First we need to load `PytorchModulePCA`
-
-
-```python
-%load_ext autoreload
-%autoreload 2
+```
+setuptools==41.0.1
+torch==1.1.0
+dataclasses==0.6
+matplotlib==3.1.0
+numpy==1.16.4
+tqdm==4.32.1
+scikit_learn==0.21.3
 ```
 
+## Example
+This example shows only how to use the API, the model is untrained so we can seee that most of the points of the same class are not close to each other.
+```python
+import matplotlib.pyplot as plt
+
+from torchvision.transforms import ToTensor
+from torch.utils.data import DataLoader
+from torchvision.datasets import MNIST
+from PytorchModulePCA import PytorchModulePCA
+from fastai.layers import simple_cnn
+
+ds = MNIST(root='~/Documents/datasets/', download=True, transform=ToTensor())
+dl = DataLoader(ds, num_workers=14, batch_size=128, shuffle=False)
+
+model = simple_cnn((1, 16, 32, 10)).cuda() # a random model
+
+last_conv_layer = model[2][0] # get the last conv layer
+
+module_pca = PytorchModulePCA(model.eval(), last_conv_layer.eval(), dl)
+module_pca(k=2, n_batches=4) # run only on 4 batches
+module_pca.plot() # plot
+plt.savefig('./images/example')
+df = module_pca.state.to_df() # get the points as pandas df
+print(df)
+
+```
+![alt](https://raw.githubusercontent.com/FrancescoSaverioZuppichini/PytorchModulePCA/master/images/example.png)
+```
+         points_0  points_1  y
+indices                       
+0        1.007328 -0.205802  5
+1        0.736135 -1.251487  0
+2       -0.287514  0.478662  4
+3       -1.154645 -0.535809  1
+4       -1.003071 -0.153210  9
+5        0.357879 -0.255997  2
+...
+```
+
+## Getting started
+It follows an more detailed tutorial.
+The code can be run using this [notebook](https://github.com/FrancescoSaverioZuppichini/PytorchModulePCA/blob/master/main.ipynb)
+
+First we need to load `PytorchModulePCA` and some others packages
 
 ```python
 import matplotlib.pyplot as plt
