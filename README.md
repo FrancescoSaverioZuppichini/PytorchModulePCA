@@ -1,6 +1,8 @@
 
 # PytorchModulePCA
 
+PCA is a technique for dimensionality reduction.  It can be used to visualize CNN layers. As we know, CNN learns to map images features to something (e.g labels). By applying PCA on the last CNN layer we can see how well the network maps those features. For example, in the next image, we can see how similar images are close to each other meaning that the network correctly learn how to encode them.
+
 ![alt](https://raw.githubusercontent.com/FrancescoSaverioZuppichini/PytorchModulePCA/master/images/2.png)
 
 ## Install
