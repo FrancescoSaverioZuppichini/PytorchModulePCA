@@ -2,6 +2,7 @@ import torch
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from dataclasses import dataclass
 from PytorchStorage import ForwardModuleStorage
@@ -18,11 +19,26 @@ from .utils import pca, ImageAnnotations3D, tensor2numpy, device
 class State():
     points: torch.tensor = torch.empty(0)
     y: torch.tensor = torch.empty(0).long()
-    indeces: torch.tensor = torch.empty(0).long()
+    indices: torch.tensor = torch.empty(0).long()
 
     def __repr__(self):
         return f"points={self.points.shape}"
 
+    def numpy(self):
+        return self.points.numpy(), self.y.numpy(), self.indices.numpy()
+
+    def to_df(self):
+        points, y, indices = self.numpy()
+        dims = self.points.shape[-1]
+
+        data = { f"points_{k}" : points[:,k] for k in range(dims)}
+        data['y'] = y
+        data['indices'] = indices
+
+        df = pd.DataFrame(data=data)
+        df = df.set_index('indices', drop=True)
+
+        return df
 
 class PytorchModulePCA():
     reducers = ['kmeans']
@@ -77,7 +93,7 @@ class PytorchModulePCA():
             points, y, x = self.after_store(points, y, x)
             bar.set_description(f"Stored {self.state.points.shape[0]} points")
 
-        self.state.indeces = torch.arange(len(self.state.points))
+        self.state.indices = torch.arange(len(self.state.points))
         return self
 
     def reduce(self, to=100, using='kmeans'):
@@ -85,7 +101,7 @@ class PytorchModulePCA():
         Reduce the number of .state.points using different methods.
         """
         if using not in self.reducers: raise ValueError(f"Parameter 'using' must be one of {self.reducers}")
-        points, y, indeces = self.state.points, self.state.y, self.state.indeces
+        points, y, indices = self.state.points, self.state.y, self.state.indices
 
         bar = tqdm(total=1)
         bar.set_description(f"Reducing {self.state.points.shape[0]} points to {to} using {using}")
@@ -93,15 +109,15 @@ class PytorchModulePCA():
         if using == 'kmeans':
             kmeans = KMeans(n_clusters=to)
             kmeans.fit(self.state.points.numpy(), y=self.state.y.numpy())
-            # update points, labels and indeces using the position of the clusters
+            # update points, labels and indices using the position of the clusters
             points = [self.state.points.numpy()[np.where(kmeans.labels_ == i)][0] for i in range(kmeans.n_clusters)]
             y = [self.state.y.numpy()[np.where(kmeans.labels_ == i)][0] for i in range(kmeans.n_clusters)]
-            indeces = [self.state.indeces.numpy()[np.where(kmeans.labels_ == i)][0] for i in range(kmeans.n_clusters)]
+            indices = [self.state.indices.numpy()[np.where(kmeans.labels_ == i)][0] for i in range(kmeans.n_clusters)]
         # creates a new ModulePCA with the reduced points
         reduced_module_pca = PytorchModulePCA(self.module, self.layer, self.dataloader)
         reduced_module_pca.state = State(torch.from_numpy(np.array(points)),
                                          torch.from_numpy(np.array(y)),
-                                         torch.from_numpy(np.array(indeces)))
+                                         torch.from_numpy(np.array(indices)))
 
         bar.update(1)
 
@@ -111,7 +127,7 @@ class PytorchModulePCA():
         """
         Creates a scatter plot using self.fig, self.ax
         """
-        points, y = tensor2numpy(self.state.points, self.state.y)
+        points, y, _ = self.state.numpy()
         for i, label in enumerate(np.unique(y).tolist()):
             if points.shape[-1] == 2:
                 self.ax.scatter(points[y == label, 0], points[y == label, 1], label=label, alpha=0.5)
@@ -138,10 +154,8 @@ class PytorchModulePCA():
         self.fig, self.ax = plt.figure(), plt.subplot(111)
         title = f"{self.state.points.shape[0]} points"
         # add subtitle with more info
-
         self._scatter()
         self._legend()
-
         plt.title(title)
 
         return self
@@ -161,7 +175,7 @@ class PytorchModulePCA():
         self.fig, self.ax = plt.figure(), plt.subplot(111)
         self._scatter()
 
-        for point, i in zip(self.state.points.numpy(), self.state.indeces.numpy()):
+        for point, l, i in self.state.numpy():
             x, y = point[0], point[1]
             img = self.dataloader.dataset[i][0]
             if transform is not None: img = transform(img)
@@ -173,10 +187,9 @@ class PytorchModulePCA():
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection=Axes3D.name, picker=True)
         points = self.state.points.numpy()
-
         imgs = []
         # store the images from the dataset
-        for i in self.state.indeces.numpy():
+        for i in self.state.indices.numpy():
             img = self.dataloader.dataset[i][0]
             if transform is not None: img = transform(img)
             img_np = img.permute(1, 2, 0).numpy().squeeze()
