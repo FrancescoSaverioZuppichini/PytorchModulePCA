@@ -174,8 +174,7 @@ class PytorchModulePCA():
     def _annotate2d(self, zoom=1, transform=None):
         self.fig, self.ax = plt.figure(), plt.subplot(111)
         self._scatter()
-
-        for point, l, i in self.state.numpy():
+        for point, l, i in zip(*self.state.numpy()):
             x, y = point[0], point[1]
             img = self.dataloader.dataset[i][0]
             if transform is not None: img = transform(img)
