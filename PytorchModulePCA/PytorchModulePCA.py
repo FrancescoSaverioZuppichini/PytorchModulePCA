@@ -13,7 +13,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from mpl_toolkits.mplot3d import Axes3D
 
 from .utils import pca, ImageAnnotations3D, tensor2numpy, device
-
+from sklearn.neighbors import KDTree
 
 @dataclass
 class State():
@@ -54,6 +54,7 @@ class PytorchModulePCA():
         self.dataloader = dataloader
         self.device = device
         self.state = State()
+        self.kdtree = None
 
     def points(self, dataloader, k=2, n_batches=None):
         """
@@ -216,3 +217,8 @@ class PytorchModulePCA():
     def check_plot_dimensions(self):
         k = self.state.points.shape[-1]
         if k not in self.plot_dimensions: raise ValueError(f"Cannot visualise a {k} dimension vector")
+
+    def _build_kdtree(self):
+        self.kdtree =  KDTree(self.state.points.numpy())
+    def query(self, x):
+        if self.kdtree is None: self._build_kdtree()
