@@ -220,5 +220,16 @@ class PytorchModulePCA():
 
     def _build_kdtree(self):
         self.kdtree =  KDTree(self.state.points.numpy())
-    def query(self, x):
+
+    def query(self, idx, n_neighbours=2, numpy=True):
+        x = self.state.points[idx].unsqueeze(0)
+        img = self.dataloader.dataset[idx][0]
         if self.kdtree is None: self._build_kdtree()
+        dist, ind = self.kdtree.query(x.numpy(), k=n_neighbours)
+        # TODO I should create an utils function like .imgs
+        # TODO, to consistency we should return the torch images?
+        neighbours = [self.dataloader.dataset[i][0] for i in ind[0]]
+        if numpy:
+            neighbours = list(map(lambda x: x.permute(1, 2, 0).numpy().squeeze(), neighbours))
+            img = img.permute(1, 2, 0).numpy().squeeze()
+        return neighbours, img, (ind, dist)

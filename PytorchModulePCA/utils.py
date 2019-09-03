@@ -1,9 +1,9 @@
 import torch
+import numpy as np
 
 from mpl_toolkits.mplot3d import proj3d
 from matplotlib import offsetbox
 from mpl_toolkits.mplot3d import Axes3D
-
 
 def pca(x, k=2):
     """
@@ -79,3 +79,6 @@ def device():
 
 def tensor2numpy(*args):
     return [e.cpu().numpy() for e in args]
+
+def torch_img2numpy_img(x):
+    return x.permute(1, 2, 0).numpy().squeeze()
