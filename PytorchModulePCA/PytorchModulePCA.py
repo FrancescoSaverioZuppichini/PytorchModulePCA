@@ -91,7 +91,7 @@ class PytorchModulePCA():
             points, y, x = self.before_store(points, y, x)
             self.state.points = torch.cat([self.state.points, points.cpu()])
             self.state.y = torch.cat([self.state.y, y.cpu()])
-            points, y, x = self.after_store(points, y, x)
+            self.state.points, self.state.y, x = self.after_store(self.state.points, self.state.y, x)
             bar.set_description(f"Stored {self.state.points.shape[0]} points")
 
         self.state.indices = torch.arange(len(self.state.points))
@@ -219,9 +219,9 @@ class PytorchModulePCA():
         if k not in self.plot_dimensions: raise ValueError(f"Cannot visualise a {k} dimension vector")
 
     def _build_kdtree(self):
-        self.kdtree =  KDTree(self.state.points.numpy())
+        self.kdtree =  KDTree(self.state.points.numpy(),  metric='euclidean')
 
-    def query(self, idx, n_neighbours=2, numpy=True):
+    def query(self, idx, n_neighbours=2, numpy=False):
         x = self.state.points[idx].unsqueeze(0)
         img = self.dataloader.dataset[idx][0]
         if self.kdtree is None: self._build_kdtree()
